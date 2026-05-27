@@ -5,6 +5,14 @@ import { Challenge } from '../entities/Challenge';
 import { User } from '../entities/User';
 import { HttpStatus } from '../utils/HttpStatus';
 import { CHALLENGE_FULL_POINTS_THRESHOLD_PERCENT } from '../utils/constants';
+import { challengeEvents } from '../events/challengeEvents';
+
+jest.mock('../events/challengeEvents', () => ({
+  CHALLENGE_COMPLETED: 'challenge.completed',
+  challengeEvents: {
+    emitAsync: jest.fn().mockResolvedValue(undefined),
+  },
+}));
 
 // ─── factories ────────────────────────────────────────────────────────────────
 
@@ -192,6 +200,99 @@ describe('ChallengeService', () => {
 
     it('floors fractional points', async () => {
       expect(await getPoints(300, 33)).toBe(99);
+    });
+  });
+
+  describe('processCompletionJob (idempotency)', () => {
+    const jobData = {
+      userId: 'user-1',
+      challengeId: 'challenge-1',
+      listenPercentage: 100,
+    };
+
+    function buildJobProcessorDb(insertResults: Array<{ identifiers: Array<{ id?: string }> }>) {
+      const increment = jest.fn().mockResolvedValue(undefined);
+      let insertAttempt = 0;
+
+      const insertChain = {
+        into: jest.fn().mockReturnThis(),
+        values: jest.fn().mockReturnThis(),
+        orIgnore: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockImplementation(() => {
+          const result = insertResults[insertAttempt] ?? { identifiers: [] };
+          insertAttempt += 1;
+          return Promise.resolve(result);
+        }),
+      };
+
+      const manager = {
+        createQueryBuilder: jest.fn().mockReturnValue({
+          insert: jest.fn().mockReturnValue(insertChain),
+        }),
+        increment,
+      };
+
+      const challengeRepo = {
+        findOne: jest.fn().mockResolvedValue(makeChallenge({ points: 150 })),
+      };
+      const userRepo = {
+        findOne: jest.fn().mockResolvedValue({ id: 'user-1', totalPoints: 150 }),
+      };
+
+      const db = {
+        getRepository: jest.fn().mockImplementation((entity) => {
+          if (entity === Challenge) return challengeRepo;
+          if (entity === User) return userRepo;
+          return {};
+        }),
+        transaction: jest.fn().mockImplementation(async (cb: (m: typeof manager) => unknown) => cb(manager)),
+      } as unknown as DataSource;
+
+      return { db, increment, insertChain };
+    }
+
+    beforeEach(() => {
+      jest.mocked(challengeEvents.emitAsync).mockClear();
+    });
+
+    it('credits points only once when the same Bull job is processed twice', async () => {
+      const { db, increment } = buildJobProcessorDb([
+        { identifiers: [{ id: 'completion-1' }] },
+        { identifiers: [] },
+      ]);
+
+      const service = new ChallengeService(db);
+      const job = { id: 'job-42', data: jobData } as Bull.Job;
+
+      await service.processCompletionJob(job);
+      await service.processCompletionJob(job);
+
+      expect(increment).toHaveBeenCalledTimes(1);
+      expect(increment).toHaveBeenCalledWith(User, { id: 'user-1' }, 'totalPoints', 150);
+    });
+
+    it('still emits leaderboard sync on retry without crediting points again', async () => {
+      const { db, increment } = buildJobProcessorDb([
+        { identifiers: [{ id: 'completion-1' }] },
+        { identifiers: [] },
+      ]);
+
+      const service = new ChallengeService(db);
+      const job = { id: 'job-99', data: jobData } as Bull.Job;
+
+      await service.processCompletionJob(job);
+      await service.processCompletionJob(job);
+
+      expect(increment).toHaveBeenCalledTimes(1);
+      expect(challengeEvents.emitAsync).toHaveBeenCalledTimes(2);
+      expect(challengeEvents.emitAsync).toHaveBeenLastCalledWith(
+        'challenge.completed',
+        expect.objectContaining({
+          userId: 'user-1',
+          newTotalPoints: 150,
+          pointsEarned: 0,
+        }),
+      );
     });
   });
 });

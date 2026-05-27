@@ -75,11 +75,14 @@ export class ChallengeService {
 
   /**
    * Bull worker processor — runs asynchronously off the HTTP thread.
-   * 1. Persists completion + increments points in a DB transaction.
-   * 2. Emits challenge.completed for side-effects (Redis leaderboard update).
+   * Idempotent on bullJobId: retries after a successful insert do not double-credit points.
+   * 1. INSERT completion ON CONFLICT (bullJobId) DO NOTHING
+   * 2. If inserted, increment totalPoints in the same transaction
+   * 3. Emit challenge.completed (also on retry to heal Redis if a prior run failed after commit)
    */
   async processCompletionJob(job: Bull.Job<CompletionJobData>): Promise<void> {
     const { userId, challengeId, listenPercentage } = job.data;
+    const bullJobId = String(job.id);
 
     const challenge = await this.db
       .getRepository(Challenge)
@@ -91,22 +94,34 @@ export class ChallengeService {
 
     const pointsEarned = this.calculatePoints(challenge.points, listenPercentage);
 
+    let pointsCredited = false;
+
     await this.db.transaction(async (manager) => {
-      await manager.getRepository(ChallengeCompletion).save(
-        manager.getRepository(ChallengeCompletion).create({
+      const insertResult = await manager
+        .createQueryBuilder()
+        .insert()
+        .into(ChallengeCompletion)
+        .values({
           userId,
           challengeId,
           pointsEarned,
           listenPercentage,
-        }),
-      );
-
-      await manager
-        .createQueryBuilder()
-        .update(User)
-        .set({ totalPoints: () => `"totalPoints" + ${pointsEarned}` })
-        .where('id = :userId', { userId })
+          bullJobId,
+        })
+        .orIgnore()
         .execute();
+
+      const inserted =
+        Array.isArray(insertResult.identifiers) &&
+        insertResult.identifiers.length > 0 &&
+        insertResult.identifiers[0]?.id != null;
+
+      if (!inserted) {
+        return;
+      }
+
+      await manager.increment(User, { id: userId }, 'totalPoints', pointsEarned);
+      pointsCredited = true;
     });
 
     const updated = await this.db.getRepository(User).findOne({ where: { id: userId } });
@@ -117,7 +132,7 @@ export class ChallengeService {
     await challengeEvents.emitAsync(CHALLENGE_COMPLETED, {
       userId,
       challengeId,
-      pointsEarned,
+      pointsEarned: pointsCredited ? pointsEarned : 0,
       listenPercentage,
       newTotalPoints: updated.totalPoints,
     });

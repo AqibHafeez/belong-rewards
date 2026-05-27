@@ -30,6 +30,10 @@ export class ChallengeCompletion {
   @Column({ type: 'decimal', precision: 5, scale: 2 })
   listenPercentage: number;
 
+  /** Bull job id — unique when set so retries do not double-credit points */
+  @Column({ type: 'varchar', nullable: true, unique: true })
+  bullJobId: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   completedAt: Date;
 
