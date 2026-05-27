@@ -22,8 +22,9 @@ const AppDataSource = new DataSource({
   logging: process.env.NODE_ENV === 'development',
   extra: {
     max: config.db.poolSize,
+    min: config.db.poolMin,
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000,
+    connectionTimeoutMillis: 2_000,
   },
 });
 

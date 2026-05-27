@@ -1,5 +1,7 @@
 import { FastifyInstance } from 'fastify';
+import rateLimit from '@fastify/rate-limit';
 import { Type, Static } from '@sinclair/typebox';
+import { config } from '../config';
 import { AuthService } from '../services/AuthService';
 import { authenticate } from '../middleware/auth';
 import { ResponseHelper } from '../utils/ResponseHelper';
@@ -29,6 +31,11 @@ type TokenBodyT    = Static<typeof TokenBody>;
 // ─── routes ───────────────────────────────────────────────────────────────────
 
 export default async function authRoutes(fastify: FastifyInstance) {
+  await fastify.register(rateLimit, {
+    max: config.rateLimit.authMax,
+    timeWindow: config.rateLimit.timeWindow,
+  });
+
   const authService = new AuthService(fastify.db);
 
   // POST /api/auth/register

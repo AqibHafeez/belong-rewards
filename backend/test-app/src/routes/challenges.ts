@@ -27,7 +27,7 @@ type ListQueryT    = Static<typeof ListQuery>;
 type CompleteBodyT = Static<typeof CompleteBody>;
 
 export default async function challengeRoutes(fastify: FastifyInstance) {
-  const challengeService = new ChallengeService(fastify.db, fastify.redis);
+  const challengeService = new ChallengeService(fastify.db);
 
   fastify.addHook('onRoute', (route) => {
     route.schema = route.schema ?? {};

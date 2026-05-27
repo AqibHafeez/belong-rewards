@@ -15,6 +15,13 @@ export const config = {
     password: process.env.DB_PASSWORD || 'belong_dev',
     database: process.env.DB_DATABASE || 'fan_rewards',
     poolSize: parseInt(process.env.DB_POOL_SIZE || '10', 10),
+    poolMin: parseInt(process.env.DB_POOL_MIN || '2', 10),
+  },
+
+  rateLimit: {
+    globalMax: parseInt(process.env.RATE_LIMIT_GLOBAL_MAX || '100', 10),
+    authMax: parseInt(process.env.RATE_LIMIT_AUTH_MAX || '10', 10),
+    timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute',
   },
 
   redis: {

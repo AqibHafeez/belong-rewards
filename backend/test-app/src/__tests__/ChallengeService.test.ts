@@ -1,6 +1,5 @@
-import { DataSource, SelectQueryBuilder, UpdateQueryBuilder } from 'typeorm';
+import { DataSource, SelectQueryBuilder } from 'typeorm';
 import Bull from 'bull';
-import Redis from 'ioredis';
 import { ChallengeService } from '../services/ChallengeService';
 import { Challenge } from '../entities/Challenge';
 import { User } from '../entities/User';
@@ -66,15 +65,11 @@ function buildMockDb(challengeRepo = {}, completionRepo = {}, userRepo = {}): Da
 // ─── tests ────────────────────────────────────────────────────────────────────
 
 describe('ChallengeService', () => {
-  let mockRedis: jest.Mocked<Partial<Redis>>;
   let mockQueue: jest.Mocked<Partial<Bull.Queue>>;
 
   beforeEach(() => {
-    mockRedis = { zadd: jest.fn().mockResolvedValue(1) };
     mockQueue = { add: jest.fn().mockResolvedValue({ id: 'job-1' }) };
   });
-
-  // ── list ─────────────────────────────────────────────────────────────────────
 
   describe('list', () => {
     it('returns paginated challenges', async () => {
@@ -82,7 +77,7 @@ describe('ChallengeService', () => {
       const qb = makeQueryBuilder(challenges, 1);
       const challengeRepo = { createQueryBuilder: jest.fn().mockReturnValue(qb) };
       const db = buildMockDb(challengeRepo);
-      const service = new ChallengeService(db, mockRedis as unknown as Redis);
+      const service = new ChallengeService(db);
 
       const result = await service.list({ page: 1, limit: 10 });
 
@@ -94,7 +89,7 @@ describe('ChallengeService', () => {
       const qb = makeQueryBuilder([], 0);
       const challengeRepo = { createQueryBuilder: jest.fn().mockReturnValue(qb) };
       const db = buildMockDb(challengeRepo);
-      const service = new ChallengeService(db, mockRedis as unknown as Redis);
+      const service = new ChallengeService(db);
 
       await service.list({ page: 1, limit: 10, difficulty: 'hard' });
 
@@ -105,16 +100,13 @@ describe('ChallengeService', () => {
     });
   });
 
-  // ── getById ──────────────────────────────────────────────────────────────────
-
   describe('getById', () => {
     it('returns the challenge when found', async () => {
       const challenge = makeChallenge();
       const challengeRepo = { findOne: jest.fn().mockResolvedValue(challenge) };
       const db = buildMockDb(challengeRepo);
 
-      const result = await new ChallengeService(db, mockRedis as unknown as Redis)
-        .getById('challenge-1');
+      const result = await new ChallengeService(db).getById('challenge-1');
 
       expect(result.id).toBe('challenge-1');
     });
@@ -124,12 +116,10 @@ describe('ChallengeService', () => {
       const db = buildMockDb(challengeRepo);
 
       await expect(
-        new ChallengeService(db, mockRedis as unknown as Redis).getById('missing'),
+        new ChallengeService(db).getById('missing'),
       ).rejects.toMatchObject({ statusCode: HttpStatus.NOT_FOUND });
     });
   });
-
-  // ── enqueueCompletion ────────────────────────────────────────────────────────
 
   describe('enqueueCompletion', () => {
     it('enqueues job and returns jobId + pointsEarned', async () => {
@@ -137,7 +127,7 @@ describe('ChallengeService', () => {
       const challengeRepo = { findOne: jest.fn().mockResolvedValue(challenge) };
       const db = buildMockDb(challengeRepo);
 
-      const result = await new ChallengeService(db, mockRedis as unknown as Redis)
+      const result = await new ChallengeService(db)
         .enqueueCompletion('user-1', 'challenge-1', 100, mockQueue as unknown as Bull.Queue);
 
       expect(mockQueue.add).toHaveBeenCalledWith({
@@ -154,7 +144,7 @@ describe('ChallengeService', () => {
       const db = buildMockDb(challengeRepo);
 
       await expect(
-        new ChallengeService(db, mockRedis as unknown as Redis)
+        new ChallengeService(db)
           .enqueueCompletion('u', 'missing', 100, mockQueue as unknown as Bull.Queue),
       ).rejects.toMatchObject({ statusCode: HttpStatus.NOT_FOUND });
     });
@@ -166,13 +156,11 @@ describe('ChallengeService', () => {
       const db = buildMockDb(challengeRepo);
 
       await expect(
-        new ChallengeService(db, mockRedis as unknown as Redis)
+        new ChallengeService(db)
           .enqueueCompletion('u', 'challenge-1', 100, mockQueue as unknown as Bull.Queue),
       ).rejects.toMatchObject({ statusCode: HttpStatus.BAD_REQUEST });
     });
   });
-
-  // ── points calculation (business rule) ───────────────────────────────────────
 
   describe('calculatePoints (via enqueueCompletion)', () => {
     async function getPoints(challengePoints: number, listenPct: number) {
@@ -180,7 +168,7 @@ describe('ChallengeService', () => {
         findOne: jest.fn().mockResolvedValue(makeChallenge({ points: challengePoints })),
       };
       const db = buildMockDb(challengeRepo);
-      const { pointsEarned } = await new ChallengeService(db, mockRedis as unknown as Redis)
+      const { pointsEarned } = await new ChallengeService(db)
         .enqueueCompletion('u', 'c', listenPct, mockQueue as unknown as Bull.Queue);
       return pointsEarned;
     }
@@ -194,7 +182,7 @@ describe('ChallengeService', () => {
     });
 
     it('awards proportional points below 80%', async () => {
-      expect(await getPoints(150, 50)).toBe(75);  // floor(150 * 0.5)
+      expect(await getPoints(150, 50)).toBe(75);
     });
 
     it('awards 0 points at 0% listen', async () => {
@@ -202,7 +190,7 @@ describe('ChallengeService', () => {
     });
 
     it('floors fractional points', async () => {
-      expect(await getPoints(300, 33)).toBe(99); // floor(300 * 0.33)
+      expect(await getPoints(300, 33)).toBe(99);
     });
   });
 });

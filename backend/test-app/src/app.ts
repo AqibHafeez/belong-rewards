@@ -7,6 +7,8 @@ import { config } from './config';
 import dbPlugin from './plugins/db';
 import redisPlugin from './plugins/redis';
 import bullPlugin from './plugins/bull';
+import correlationIdPlugin from './plugins/correlationId';
+import challengeEventsPlugin from './plugins/challengeEvents';
 import { AppError } from './errors';
 import swaggerPlugin from './plugins/swagger';
 import { HttpStatus } from './utils/HttpStatus';
@@ -23,40 +25,46 @@ export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: config.logLevel },
     genReqId: () => randomUUID(),
-    requestIdHeader: 'x-request-id',
-    requestIdLogLabel: 'requestId',
+    requestIdHeader: 'x-correlation-id',
+    requestIdLogLabel: 'correlationId',
   });
 
-  // Swagger — must be before routes
   await app.register(swaggerPlugin);
+  await app.register(correlationIdPlugin);
 
-  // Security headers
-  await app.register(helmet, { contentSecurityPolicy: false });
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", 'data:'],
+        objectSrc: ["'none'"],
+        frameSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+      },
+    },
+  });
 
-  // CORS
   await app.register(cors, {
     origin: config.corsOrigins,
     credentials: true,
   });
 
-  // Rate limiting (bonus)
   await app.register(rateLimit, {
-    max: 100,
-    timeWindow: '1 minute',
-    keyGenerator: (req) => req.headers['x-forwarded-for'] as string ?? req.ip,
+    max: config.rateLimit.globalMax,
+    timeWindow: config.rateLimit.timeWindow,
+    keyGenerator: (req) => (req.headers['x-forwarded-for'] as string) ?? req.ip,
   });
 
-  // Correlation ID forwarded in every response
-  app.addHook('onSend', async (req, reply) => {
-    reply.header('x-request-id', req.id);
-  });
-
-  // Infrastructure plugins
   await app.register(dbPlugin);
   await app.register(redisPlugin);
   await app.register(bullPlugin);
+  await app.register(challengeEventsPlugin);
 
-  // Health check — verifies DB + Redis connectivity
   app.get('/health', { schema: { tags: ['health'] } }, async (req, reply) => {
     try {
       await app.db.query('SELECT 1');
@@ -72,26 +80,23 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
   });
 
-  // Centralised error handler — always returns the standard response shape
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof AppError) {
       return reply
         .status(err.statusCode)
         .send(ResponseHelper.error(err.statusCode, err.message));
     }
-    // Fastify built-in validation / not-found errors
     if (err.statusCode && err.statusCode < 500) {
       return reply
         .status(err.statusCode)
         .send(ResponseHelper.error(err.statusCode as never, err.message));
     }
-    req.log.error({ err, requestId: req.id }, 'Unhandled error');
+    req.log.error({ err, correlationId: req.id }, 'Unhandled error');
     return reply
       .status(HttpStatus.INTERNAL_SERVER_ERROR)
       .send(ResponseHelper.error(HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error'));
   });
 
-  // Routes
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(userRoutes, { prefix: '/api/users' });
   await app.register(challengeRoutes, { prefix: '/api/challenges' });
@@ -99,7 +104,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(leaderboardRoutes, { prefix: '/api/leaderboard' });
   await app.register(adminRoutes, { prefix: '/api/admin' });
 
-  // Warm Redis leaderboard cache from DB on startup
   app.addHook('onReady', async () => {
     const leaderboardService = new LeaderboardService(app.db, app.redis);
     await leaderboardService.syncFromDB();
@@ -113,9 +117,15 @@ async function start(): Promise<void> {
   const app = await buildApp();
 
   const shutdown = async (signal: string) => {
-    app.log.info(`Received ${signal}, shutting down gracefully ZzZz...`);
-    await app.close();
-    process.exit(0);
+    app.log.info({ signal }, 'Received shutdown signal, closing gracefully');
+    try {
+      await app.close();
+      app.log.info('Shutdown complete');
+      process.exit(0);
+    } catch (err) {
+      app.log.error({ err }, 'Error during shutdown');
+      process.exit(1);
+    }
   };
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
