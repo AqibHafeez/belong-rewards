@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { Redis } from 'ioredis';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import { REDIS_LEADERBOARD_KEY } from '../utils/constants';
 
 dotenv.config();
 
@@ -42,7 +43,7 @@ export async function cleanupTestData(dataSource: DataSource, redis: Redis): Pro
   await dataSource.query('DELETE FROM rewards');
   await dataSource.query('DELETE FROM challenges');
   await dataSource.query('DELETE FROM users');
-  await redis.del('leaderboard');
+  await redis.del(REDIS_LEADERBOARD_KEY);
 }
 
 export async function teardownTestEnv(dataSource: DataSource, redis: Redis): Promise<void> {

@@ -5,6 +5,10 @@ import { ChallengeCompletion } from '../entities/ChallengeCompletion';
 import { User } from '../entities/User';
 import { AppError, HttpStatus } from '../errors';
 import { challengeEvents, CHALLENGE_COMPLETED } from '../events/challengeEvents';
+import {
+  CHALLENGE_FULL_POINTS_THRESHOLD_PERCENT,
+  LISTEN_PERCENTAGE_MAX,
+} from '../utils/constants';
 import type { PaginationOptions } from '../types';
 
 export interface CompletionJobData {
@@ -121,8 +125,8 @@ export class ChallengeService {
 
   /** Business rule: ≥80% listen earns full points; below that is proportional */
   private calculatePoints(challengePoints: number, listenPercentage: number): number {
-    return listenPercentage >= 80
+    return listenPercentage >= CHALLENGE_FULL_POINTS_THRESHOLD_PERCENT
       ? challengePoints
-      : Math.floor(challengePoints * (listenPercentage / 100));
+      : Math.floor(challengePoints * (listenPercentage / LISTEN_PERCENTAGE_MAX));
   }
 }

@@ -5,6 +5,7 @@ import { Reward } from '../entities/Reward';
 import { RewardRedemption } from '../entities/RewardRedemption';
 import { User } from '../entities/User';
 import { HttpStatus } from '../utils/HttpStatus';
+import { REDIS_LEADERBOARD_KEY } from '../utils/constants';
 
 // ─── factories ────────────────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ describe('RewardService', () => {
       const { remainingPoints } = await service.redeem('user-1', 'reward-1');
 
       expect(remainingPoints).toBe(300); // 500 - 200
-      expect(mockRedis.zadd).toHaveBeenCalledWith('leaderboard', 300, 'user-1');
+      expect(mockRedis.zadd).toHaveBeenCalledWith(REDIS_LEADERBOARD_KEY, 300, 'user-1');
     });
 
     it('throws 404 when reward not found', async () => {

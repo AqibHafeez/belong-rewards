@@ -1,7 +1,9 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
-
-const CORRELATION_HEADER = 'x-correlation-id';
+import {
+  HTTP_HEADER_CORRELATION_ID,
+  HTTP_HEADER_REQUEST_ID,
+} from '../utils/constants';
 
 const correlationIdPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('onRequest', async (request) => {
@@ -9,8 +11,8 @@ const correlationIdPlugin: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.addHook('onSend', async (request, reply) => {
-    reply.header(CORRELATION_HEADER, request.id);
-    reply.header('x-request-id', request.id);
+    reply.header(HTTP_HEADER_CORRELATION_ID, request.id);
+    reply.header(HTTP_HEADER_REQUEST_ID, request.id);
   });
 };
 

@@ -1,5 +1,6 @@
 import { sanitizeForAudit } from '../utils/sanitizeForAudit';
 import { deriveAuditAction, shouldAuditRequest } from '../services/AuditService';
+import { AUDIT_REDACTED_VALUE } from '../utils/constants';
 
 describe('sanitizeForAudit', () => {
   it('redacts sensitive fields', () => {
@@ -11,9 +12,9 @@ describe('sanitizeForAudit', () => {
     }) as Record<string, unknown>;
 
     expect(result.email).toBe('user@example.com');
-    expect(result.password).toBe('[REDACTED]');
-    expect(result.refreshToken).toBe('[REDACTED]');
-    expect((result.nested as Record<string, unknown>).accessToken).toBe('[REDACTED]');
+    expect(result.password).toBe(AUDIT_REDACTED_VALUE);
+    expect(result.refreshToken).toBe(AUDIT_REDACTED_VALUE);
+    expect((result.nested as Record<string, unknown>).accessToken).toBe(AUDIT_REDACTED_VALUE);
   });
 
   it('leaves non-sensitive fields unchanged', () => {

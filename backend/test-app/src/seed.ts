@@ -6,6 +6,7 @@ import { Reward } from './entities/Reward';
 import { User } from './entities/User';
 import { ChallengeCompletion } from './entities/ChallengeCompletion';
 import { config } from './config';
+import { LISTEN_PERCENTAGE_MAX } from './utils/constants';
 
 const SEED_CHALLENGES = [
   {
@@ -66,7 +67,7 @@ const DEMO_USERS = [
   { email: 'test@belong.com',    displayName: 'Test Fan', completions: [] },        // reviewer login
 ];
 const DEMO_PASSWORD = 'Test@1234';
-const DEMO_LISTEN_PCT = 100; // full points for demo
+const DEMO_LISTEN_PCT = LISTEN_PERCENTAGE_MAX;
 
 
 function log(msg: string) {

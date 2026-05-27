@@ -2,6 +2,7 @@ import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { HTTP_HEADER_ADMIN_API_KEY } from '../utils/constants';
 
 const swaggerPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(swagger, {
@@ -19,7 +20,7 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify) => {
           '',
           '**Auth flow:** `POST /api/auth/login` → copy `accessToken` → click **Authorize** → paste as Bearer token.',
           '',
-          '**Admin endpoints** require `X-Admin-Key` header (set `ADMIN_API_KEY` in `.env`).',
+          `**Admin endpoints** require \`${HTTP_HEADER_ADMIN_API_KEY}\` header (set \`ADMIN_API_KEY\` in \`.env\`).`,
         ].join('\n'),
         version: '1.0.0',
       },
@@ -30,7 +31,7 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify) => {
         { name: 'challenges',  description: 'Browse and complete music challenges' },
         { name: 'rewards',     description: 'Redeem rewards with earned points' },
         { name: 'leaderboard', description: 'Ranked fan leaderboard' },
-        { name: 'admin',       description: 'Admin CRUD — requires X-Admin-Key header' },
+        { name: 'admin',       description: `Admin CRUD — requires ${HTTP_HEADER_ADMIN_API_KEY} header` },
       ],
       components: {
         securitySchemes: {
@@ -42,7 +43,7 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify) => {
           },
           adminApiKey: {
             type: 'apiKey',
-            name: 'x-admin-key',
+            name: HTTP_HEADER_ADMIN_API_KEY,
             in: 'header',
             description: 'Admin API key from `ADMIN_API_KEY` env var',
           },

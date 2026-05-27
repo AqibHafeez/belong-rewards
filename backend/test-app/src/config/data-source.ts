@@ -8,6 +8,10 @@ import { Reward } from '../entities/Reward';
 import { RewardRedemption } from '../entities/RewardRedemption';
 import { RefreshToken } from '../entities/RefreshToken';
 import { AuditLog } from '../entities/AuditLog';
+import {
+  DB_POOL_CONNECTION_TIMEOUT_MS,
+  DB_POOL_IDLE_TIMEOUT_MS,
+} from '../utils/constants';
 
 // Single default export — TypeORM CLI requires exactly one DataSource export
 const AppDataSource = new DataSource({
@@ -24,8 +28,8 @@ const AppDataSource = new DataSource({
   extra: {
     max: config.db.poolSize,
     min: config.db.poolMin,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 2_000,
+    idleTimeoutMillis: DB_POOL_IDLE_TIMEOUT_MS,
+    connectionTimeoutMillis: DB_POOL_CONNECTION_TIMEOUT_MS,
   },
 });
 

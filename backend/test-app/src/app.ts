@@ -21,12 +21,16 @@ import rewardRoutes from './routes/rewards';
 import leaderboardRoutes from './routes/leaderboard';
 import adminRoutes from './routes/admin';
 import { LeaderboardService } from './services/LeaderboardService';
+import {
+  HTTP_HEADER_CORRELATION_ID,
+  HTTP_HEADER_FORWARDED_FOR,
+} from './utils/constants';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: config.logLevel },
     genReqId: () => randomUUID(),
-    requestIdHeader: 'x-correlation-id',
+    requestIdHeader: HTTP_HEADER_CORRELATION_ID,
     requestIdLogLabel: 'correlationId',
   });
 
@@ -58,7 +62,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(rateLimit, {
     max: config.rateLimit.globalMax,
     timeWindow: config.rateLimit.timeWindow,
-    keyGenerator: (req) => (req.headers['x-forwarded-for'] as string) ?? req.ip,
+    keyGenerator: (req) => (req.headers[HTTP_HEADER_FORWARDED_FOR] as string) ?? req.ip,
   });
 
   await app.register(dbPlugin);

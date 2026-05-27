@@ -1,4 +1,11 @@
 import dotenv from 'dotenv';
+import {
+  DB_POOL_MIN_DEFAULT,
+  DB_POOL_SIZE_DEFAULT,
+  RATE_LIMIT_AUTH_MAX_DEFAULT,
+  RATE_LIMIT_GLOBAL_MAX_DEFAULT,
+  RATE_LIMIT_WINDOW_DEFAULT,
+} from '../utils/constants';
 
 dotenv.config();
 
@@ -14,14 +21,14 @@ export const config = {
     username: process.env.DB_USERNAME || 'belong',
     password: process.env.DB_PASSWORD || 'belong_dev',
     database: process.env.DB_DATABASE || 'fan_rewards',
-    poolSize: parseInt(process.env.DB_POOL_SIZE || '10', 10),
-    poolMin: parseInt(process.env.DB_POOL_MIN || '2', 10),
+    poolSize: parseInt(process.env.DB_POOL_SIZE || String(DB_POOL_SIZE_DEFAULT), 10),
+    poolMin: parseInt(process.env.DB_POOL_MIN || String(DB_POOL_MIN_DEFAULT), 10),
   },
 
   rateLimit: {
-    globalMax: parseInt(process.env.RATE_LIMIT_GLOBAL_MAX || '100', 10),
-    authMax: parseInt(process.env.RATE_LIMIT_AUTH_MAX || '10', 10),
-    timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute',
+    globalMax: parseInt(process.env.RATE_LIMIT_GLOBAL_MAX || String(RATE_LIMIT_GLOBAL_MAX_DEFAULT), 10),
+    authMax: parseInt(process.env.RATE_LIMIT_AUTH_MAX || String(RATE_LIMIT_AUTH_MAX_DEFAULT), 10),
+    timeWindow: process.env.RATE_LIMIT_WINDOW || RATE_LIMIT_WINDOW_DEFAULT,
   },
 
   redis: {

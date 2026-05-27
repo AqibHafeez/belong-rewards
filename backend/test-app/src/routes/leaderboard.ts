@@ -4,12 +4,19 @@ import { LeaderboardService } from '../services/LeaderboardService';
 import { authenticate } from '../middleware/auth';
 import { ResponseHelper } from '../utils/ResponseHelper';
 import { HttpStatus } from '../utils/HttpStatus';
+import {
+  PAGINATION_DEFAULT_LIMIT,
+  PAGINATION_DEFAULT_PAGE,
+  PAGINATION_MAX_LIMIT,
+  PAGINATION_MIN_LIMIT,
+  PAGINATION_MIN_PAGE,
+} from '../utils/constants';
 
 // ─── schemas ──────────────────────────────────────────────────────────────────
 
 const PaginationQuery = Type.Object({
-  page:  Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
-  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 20 })),
+  page:  Type.Optional(Type.Integer({ minimum: PAGINATION_MIN_PAGE, default: PAGINATION_DEFAULT_PAGE })),
+  limit: Type.Optional(Type.Integer({ minimum: PAGINATION_MIN_LIMIT, maximum: PAGINATION_MAX_LIMIT, default: PAGINATION_DEFAULT_LIMIT })),
 });
 
 type PaginationQueryT = Static<typeof PaginationQuery>;
@@ -32,8 +39,8 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
     '/',
     { schema: { querystring: PaginationQuery } },
     async (request, reply) => {
-      const page  = request.query.page  ?? 1;
-      const limit = request.query.limit ?? 20;
+      const page  = request.query.page  ?? PAGINATION_DEFAULT_PAGE;
+      const limit = request.query.limit ?? PAGINATION_DEFAULT_LIMIT;
 
       const { data, total } = await leaderboardService.getTopFans(page, limit);
 

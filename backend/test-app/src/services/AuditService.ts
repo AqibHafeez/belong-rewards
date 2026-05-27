@@ -1,5 +1,10 @@
 import { DataSource } from 'typeorm';
 import { AuditLog } from '../entities/AuditLog';
+import {
+  AUDIT_MUTATING_METHODS,
+  AUDIT_SKIP_PATH_DOCS,
+  AUDIT_SKIP_PATH_HEALTH,
+} from '../utils/constants';
 
 export interface AuditLogInput {
   correlationId: string;
@@ -12,9 +17,8 @@ export interface AuditLogInput {
   metadata?: Record<string, unknown> | null;
 }
 
-const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-
-const SKIP_PATH_PREFIXES = ['/health', '/docs'];
+const MUTATING_METHODS = new Set<string>(AUDIT_MUTATING_METHODS);
+const SKIP_PATH_PREFIXES = [AUDIT_SKIP_PATH_HEALTH, AUDIT_SKIP_PATH_DOCS];
 
 export function shouldAuditRequest(method: string, url: string): boolean {
   if (!MUTATING_METHODS.has(method.toUpperCase())) {

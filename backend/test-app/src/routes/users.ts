@@ -5,16 +5,25 @@ import { authenticate } from '../middleware/auth';
 import { ResponseHelper } from '../utils/ResponseHelper';
 import { HttpStatus } from '../utils/HttpStatus';
 import { AppError } from '../errors';
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  DISPLAY_NAME_MIN_LENGTH,
+  PAGINATION_DEFAULT_LIMIT,
+  PAGINATION_DEFAULT_PAGE,
+  PAGINATION_MAX_LIMIT,
+  PAGINATION_MIN_LIMIT,
+  PAGINATION_MIN_PAGE,
+} from '../utils/constants';
 
 // ─── schemas ──────────────────────────────────────────────────────────────────
 
 const UpdateProfileBody = Type.Object({
-  displayName: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
+  displayName: Type.Optional(Type.String({ minLength: DISPLAY_NAME_MIN_LENGTH, maxLength: DISPLAY_NAME_MAX_LENGTH })),
 });
 
 const PaginationQuery = Type.Object({
-  page:  Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
-  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 20 })),
+  page:  Type.Optional(Type.Integer({ minimum: PAGINATION_MIN_PAGE, default: PAGINATION_DEFAULT_PAGE })),
+  limit: Type.Optional(Type.Integer({ minimum: PAGINATION_MIN_LIMIT, maximum: PAGINATION_MAX_LIMIT, default: PAGINATION_DEFAULT_LIMIT })),
 });
 
 type UpdateProfileBodyT = Static<typeof UpdateProfileBody>;
@@ -72,8 +81,8 @@ export default async function userRoutes(fastify: FastifyInstance) {
     '/me/completions',
     { schema: { querystring: PaginationQuery } },
     async (request, reply) => {
-      const page  = request.query.page  ?? 1;
-      const limit = request.query.limit ?? 20;
+      const page  = request.query.page  ?? PAGINATION_DEFAULT_PAGE;
+      const limit = request.query.limit ?? PAGINATION_DEFAULT_LIMIT;
 
       const { data, total } = await userService.getCompletions(
         request.user!.userId,
@@ -96,8 +105,8 @@ export default async function userRoutes(fastify: FastifyInstance) {
     '/me/redemptions',
     { schema: { querystring: PaginationQuery } },
     async (request, reply) => {
-      const page  = request.query.page  ?? 1;
-      const limit = request.query.limit ?? 20;
+      const page  = request.query.page  ?? PAGINATION_DEFAULT_PAGE;
+      const limit = request.query.limit ?? PAGINATION_DEFAULT_LIMIT;
 
       const { data, total } = await userService.getRedemptions(
         request.user!.userId,

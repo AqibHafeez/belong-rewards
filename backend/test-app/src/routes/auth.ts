@@ -6,13 +6,18 @@ import { AuthService } from '../services/AuthService';
 import { authenticate } from '../middleware/auth';
 import { ResponseHelper } from '../utils/ResponseHelper';
 import { HttpStatus } from '../utils/HttpStatus';
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  DISPLAY_NAME_MIN_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from '../utils/constants';
 
 // ─── request schemas ──────────────────────────────────────────────────────────
 
 const RegisterBody = Type.Object({
   email: Type.String({ format: 'email' }),
-  password: Type.String({ minLength: 8 }),
-  displayName: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
+  password: Type.String({ minLength: PASSWORD_MIN_LENGTH }),
+  displayName: Type.Optional(Type.String({ minLength: DISPLAY_NAME_MIN_LENGTH, maxLength: DISPLAY_NAME_MAX_LENGTH })),
 });
 
 const LoginBody = Type.Object({

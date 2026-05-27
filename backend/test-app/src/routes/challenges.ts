@@ -5,12 +5,21 @@ import { authenticate } from '../middleware/auth';
 import { ResponseHelper } from '../utils/ResponseHelper';
 import { HttpStatus } from '../utils/HttpStatus';
 import type { Difficulty } from '../entities/Challenge';
+import {
+  LISTEN_PERCENTAGE_MAX,
+  LISTEN_PERCENTAGE_MIN,
+  PAGINATION_DEFAULT_LIMIT,
+  PAGINATION_DEFAULT_PAGE,
+  PAGINATION_MAX_LIMIT,
+  PAGINATION_MIN_LIMIT,
+  PAGINATION_MIN_PAGE,
+} from '../utils/constants';
 
 // ─── schemas ──────────────────────────────────────────────────────────────────
 
 const ListQuery = Type.Object({
-  page:       Type.Optional(Type.Integer({ minimum: 1, default: 1 })),
-  limit:      Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 20 })),
+  page:       Type.Optional(Type.Integer({ minimum: PAGINATION_MIN_PAGE, default: PAGINATION_DEFAULT_PAGE })),
+  limit:      Type.Optional(Type.Integer({ minimum: PAGINATION_MIN_LIMIT, maximum: PAGINATION_MAX_LIMIT, default: PAGINATION_DEFAULT_LIMIT })),
   difficulty: Type.Optional(Type.Union([
     Type.Literal('easy'),
     Type.Literal('medium'),
@@ -20,7 +29,7 @@ const ListQuery = Type.Object({
 });
 
 const CompleteBody = Type.Object({
-  listenPercentage: Type.Number({ minimum: 0, maximum: 100 }),
+  listenPercentage: Type.Number({ minimum: LISTEN_PERCENTAGE_MIN, maximum: LISTEN_PERCENTAGE_MAX }),
 });
 
 type ListQueryT    = Static<typeof ListQuery>;
@@ -44,8 +53,8 @@ export default async function challengeRoutes(fastify: FastifyInstance) {
     '/',
     { schema: { querystring: ListQuery } },
     async (request, reply) => {
-      const page       = request.query.page       ?? 1;
-      const limit      = request.query.limit      ?? 20;
+      const page       = request.query.page       ?? PAGINATION_DEFAULT_PAGE;
+      const limit      = request.query.limit      ?? PAGINATION_DEFAULT_LIMIT;
       const difficulty = request.query.difficulty as Difficulty | undefined;
       const isActive   = request.query.isActive   ?? true;
 

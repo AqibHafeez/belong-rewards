@@ -4,6 +4,7 @@ import { ChallengeService } from '../services/ChallengeService';
 import { Challenge } from '../entities/Challenge';
 import { User } from '../entities/User';
 import { HttpStatus } from '../utils/HttpStatus';
+import { CHALLENGE_FULL_POINTS_THRESHOLD_PERCENT } from '../utils/constants';
 
 // ─── factories ────────────────────────────────────────────────────────────────
 
@@ -177,11 +178,11 @@ describe('ChallengeService', () => {
       expect(await getPoints(150, 100)).toBe(150);
     });
 
-    it('awards full points at exactly 80% (threshold)', async () => {
-      expect(await getPoints(150, 80)).toBe(150);
+    it(`awards full points at exactly ${CHALLENGE_FULL_POINTS_THRESHOLD_PERCENT}% (threshold)`, async () => {
+      expect(await getPoints(150, CHALLENGE_FULL_POINTS_THRESHOLD_PERCENT)).toBe(150);
     });
 
-    it('awards proportional points below 80%', async () => {
+    it(`awards proportional points below ${CHALLENGE_FULL_POINTS_THRESHOLD_PERCENT}%`, async () => {
       expect(await getPoints(150, 50)).toBe(75);
     });
 

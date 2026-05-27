@@ -2,6 +2,13 @@ import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
 import Bull from 'bull';
 import { config } from '../config';
+import {
+  BULL_JOB_ATTEMPTS,
+  BULL_JOB_BACKOFF_DELAY_MS,
+  BULL_QUEUE_CHALLENGE_COMPLETIONS,
+  BULL_REMOVE_ON_COMPLETE_COUNT,
+  BULL_REMOVE_ON_FAIL_COUNT,
+} from '../utils/constants';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -10,13 +17,13 @@ declare module 'fastify' {
 }
 
 const bullPlugin: FastifyPluginAsync = async (fastify) => {
-  const challengeQueue = new Bull('challenge-completions', {
+  const challengeQueue = new Bull(BULL_QUEUE_CHALLENGE_COMPLETIONS, {
     redis: config.redis.url,
     defaultJobOptions: {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 1000 },
-      removeOnComplete: 100,
-      removeOnFail: 50,
+      attempts: BULL_JOB_ATTEMPTS,
+      backoff: { type: 'exponential', delay: BULL_JOB_BACKOFF_DELAY_MS },
+      removeOnComplete: BULL_REMOVE_ON_COMPLETE_COUNT,
+      removeOnFail: BULL_REMOVE_ON_FAIL_COUNT,
     },
   });
 
