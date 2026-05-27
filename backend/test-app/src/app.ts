@@ -8,6 +8,9 @@ import dbPlugin from './plugins/db';
 import redisPlugin from './plugins/redis';
 import bullPlugin from './plugins/bull';
 import { AppError } from './errors';
+import { HttpStatus } from './utils/HttpStatus';
+import { ResponseHelper } from './utils/ResponseHelper';
+import authRoutes from './routes/auth';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -48,27 +51,39 @@ export async function buildApp(): Promise<FastifyInstance> {
     try {
       await app.db.query('SELECT 1');
       await app.redis.ping();
-      return reply.send({ status: 'ok', db: 'up', redis: 'up' });
+      return reply
+        .status(HttpStatus.OK)
+        .send(ResponseHelper.ok({ db: 'up', redis: 'up' }, 'Service is healthy'));
     } catch (err) {
       req.log.error(err, 'Health check failed');
-      return reply.status(503).send({ status: 'error' });
+      return reply
+        .status(HttpStatus.SERVICE_UNAVAILABLE)
+        .send(ResponseHelper.error(HttpStatus.SERVICE_UNAVAILABLE, 'Service unavailable'));
     }
   });
 
-  // Centralised error handler
+  // Centralised error handler — always returns the standard response shape
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof AppError) {
-      return reply.status(err.statusCode).send({ error: err.message });
+      return reply
+        .status(err.statusCode)
+        .send(ResponseHelper.error(err.statusCode, err.message));
     }
-    // Fastify validation errors (schema mismatch)
+    // Fastify built-in validation / not-found errors
     if (err.statusCode && err.statusCode < 500) {
-      return reply.status(err.statusCode).send({ error: err.message });
+      return reply
+        .status(err.statusCode)
+        .send(ResponseHelper.error(err.statusCode as never, err.message));
     }
     req.log.error({ err, requestId: req.id }, 'Unhandled error');
-    return reply.status(500).send({ error: 'Internal server error' });
+    return reply
+      .status(HttpStatus.INTERNAL_SERVER_ERROR)
+      .send(ResponseHelper.error(HttpStatus.INTERNAL_SERVER_ERROR, 'Internal server error'));
   });
 
-  // TODO: Register auth, user, challenge, reward, leaderboard routes
+  // Routes
+  await app.register(authRoutes, { prefix: '/api/auth' });
+  // TODO: Register user, challenge, reward, leaderboard routes
 
   return app;
 }

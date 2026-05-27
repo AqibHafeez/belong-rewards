@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
 import { DataSource } from 'typeorm';
-import { AppDataSource } from '../config/data-source';
+import AppDataSource from '../config/data-source';
 
 declare module 'fastify' {
   interface FastifyInstance {

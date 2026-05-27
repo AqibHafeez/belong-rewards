@@ -8,8 +8,8 @@ import { Reward } from '../entities/Reward';
 import { RewardRedemption } from '../entities/RewardRedemption';
 import { RefreshToken } from '../entities/RefreshToken';
 
-// Exported for both the Fastify plugin and the TypeORM CLI
-export const AppDataSource = new DataSource({
+// Single default export — TypeORM CLI requires exactly one DataSource export
+const AppDataSource = new DataSource({
   type: 'postgres',
   host: config.db.host,
   port: config.db.port,

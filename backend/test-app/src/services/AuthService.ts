@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../entities/User';
 import { RefreshToken } from '../entities/RefreshToken';
 import { config } from '../config';
-import { AppError } from '../errors';
+import { AppError, HttpStatus } from '../errors';
 import { TokenHelper } from '../utils/TokenHelper';
 import type { TokenPair } from '../types';
 
@@ -20,7 +20,7 @@ export class AuthService {
 
     const existing = await userRepo.findOne({ where: { email } });
     if (existing) {
-      throw new AppError(409, 'Email already registered');
+      throw new AppError(HttpStatus.CONFLICT, 'Email already registered');
     }
 
     const passwordHash = await bcrypt.hash(password, config.auth.bcryptRounds);
@@ -37,11 +37,11 @@ export class AuthService {
     if (!user) {
       // Constant-time guard: prevents timing-based email enumeration
       await bcrypt.hash('__dummy__', config.auth.bcryptRounds);
-      throw new AppError(401, 'Invalid credentials');
+      throw new AppError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
     }
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      throw new AppError(423, 'Account temporarily locked. Try again later.');
+      throw new AppError(HttpStatus.LOCKED, 'Account temporarily locked. Try again later.');
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
@@ -52,7 +52,7 @@ export class AuthService {
         updates.lockedUntil = new Date(Date.now() + config.auth.lockDurationMs);
       }
       await userRepo.update(user.id, updates);
-      throw new AppError(401, 'Invalid credentials');
+      throw new AppError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
     }
 
     // Reset failed counter on successful login
@@ -68,7 +68,7 @@ export class AuthService {
     try {
       payload = jwt.verify(rawToken, config.jwt.refreshSecret) as { userId: string };
     } catch {
-      throw new AppError(401, 'Invalid refresh token');
+      throw new AppError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
     }
 
     const tokenHash = TokenHelper.hash(rawToken);
@@ -76,7 +76,7 @@ export class AuthService {
 
     const stored = await tokenRepo.findOne({ where: { tokenHash } });
     if (!stored) {
-      throw new AppError(401, 'Invalid refresh token');
+      throw new AppError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
     }
 
     // Reuse detection: already-revoked token presented → potential token theft
@@ -86,11 +86,11 @@ export class AuthService {
         { userId: payload.userId, revokedAt: IsNull() },
         { revokedAt: new Date() },
       );
-      throw new AppError(401, 'Refresh token reuse detected. All sessions invalidated.');
+      throw new AppError(HttpStatus.UNAUTHORIZED, 'Refresh token reuse detected. All sessions invalidated.');
     }
 
     if (stored.expiresAt < new Date()) {
-      throw new AppError(401, 'Refresh token expired');
+      throw new AppError(HttpStatus.UNAUTHORIZED, 'Refresh token expired');
     }
 
     // Rotate: revoke consumed token, issue a fresh pair

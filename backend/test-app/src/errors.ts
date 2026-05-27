@@ -1,13 +1,17 @@
+import { HttpStatus, HttpStatusCode } from './utils/HttpStatus';
+
 export class AppError extends Error {
   constructor(
-    public readonly statusCode: number,
+    public readonly statusCode: HttpStatusCode,
     message: string,
   ) {
     super(message);
     this.name = 'AppError';
-    // Maintains proper stack trace in V8
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, AppError);
     }
   }
 }
+
+// Re-export for convenience so callers only need one import
+export { HttpStatus };
