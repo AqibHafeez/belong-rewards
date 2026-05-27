@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { DataSource } from 'typeorm';
 import { RefreshToken } from '../entities/RefreshToken';
@@ -16,13 +17,17 @@ export class TokenHelper {
     userId: string,
     db: DataSource,
   ): Promise<TokenPair> {
-    const accessToken = jwt.sign({ userId }, config.jwt.accessSecret, {
-      expiresIn: config.jwt.accessExpiresIn,
-    } as jwt.SignOptions);
+    const accessToken = jwt.sign(
+      { userId, jti: randomUUID() },
+      config.jwt.accessSecret,
+      { expiresIn: config.jwt.accessExpiresIn } as jwt.SignOptions,
+    );
 
-    const rawRefreshToken = jwt.sign({ userId }, config.jwt.refreshSecret, {
-      expiresIn: config.jwt.refreshExpiresIn,
-    } as jwt.SignOptions);
+    const rawRefreshToken = jwt.sign(
+      { userId, jti: randomUUID() },
+      config.jwt.refreshSecret,
+      { expiresIn: config.jwt.refreshExpiresIn } as jwt.SignOptions,
+    );
 
     const tokenHash = TokenHelper.hash(rawRefreshToken);
     const expiresAt = new Date(Date.now() + config.jwt.refreshTtlMs);

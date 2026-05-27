@@ -145,4 +145,6 @@ async function start(): Promise<void> {
   }
 }
 
-start();
+if (require.main === module) {
+  void start();
+}
