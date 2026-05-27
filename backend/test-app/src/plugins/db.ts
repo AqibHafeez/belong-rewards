@@ -1,26 +1,26 @@
+import fp from 'fastify-plugin';
+import { FastifyPluginAsync } from 'fastify';
 import { DataSource } from 'typeorm';
-import { config } from '../config';
+import { AppDataSource } from '../config/data-source';
 
-// TODO: Import your entities here
+declare module 'fastify' {
+  interface FastifyInstance {
+    db: DataSource;
+  }
+}
 
-const dataSource = new DataSource({
-  type: 'postgres',
-  host: config.db.host,
-  port: config.db.port,
-  username: config.db.username,
-  password: config.db.password,
-  database: config.db.database,
-  entities: [
-    // TODO: Add your entity classes here
-  ],
-  migrations: [
-    // TODO: Add migration paths
-  ],
-  synchronize: false, // Use migrations instead
-  logging: false,
-});
+const dbPlugin: FastifyPluginAsync = async (fastify) => {
+  await AppDataSource.initialize();
+  fastify.log.info('PostgreSQL connected');
 
-export { dataSource };
+  fastify.decorate('db', AppDataSource);
 
-// TODO: Create a Fastify plugin that initializes the DataSource
-// and decorates the Fastify instance with it
+  fastify.addHook('onClose', async () => {
+    if (AppDataSource.isInitialized) {
+      await AppDataSource.destroy();
+      fastify.log.info('PostgreSQL connection closed');
+    }
+  });
+};
+
+export default fp(dbPlugin, { name: 'db' });

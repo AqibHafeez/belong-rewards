@@ -1,41 +1,82 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
+import { randomUUID } from 'crypto';
 import { config } from './config';
+import dbPlugin from './plugins/db';
+import redisPlugin from './plugins/redis';
+import bullPlugin from './plugins/bull';
 
-const buildApp = async () => {
+export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: {
-      level: config.logLevel,
-    },
+    logger: { level: config.logLevel },
+    genReqId: () => randomUUID(),
+    requestIdHeader: 'x-request-id',
+    requestIdLogLabel: 'requestId',
   });
 
-  // Register plugins
-  await app.register(cors, { origin: true });
-  await app.register(helmet);
+  // Security headers
+  await app.register(helmet, { contentSecurityPolicy: false });
 
-  // TODO: Register database plugin (see plugins/db.ts)
-  // TODO: Register auth middleware (see middleware/auth.ts)
-  // TODO: Register route plugins (see routes/)
+  // CORS
+  await app.register(cors, {
+    origin: config.corsOrigins,
+    credentials: true,
+  });
 
-  // Health check
-  app.get('/health', async () => ({ status: 'ok' }));
+  // Rate limiting (bonus)
+  await app.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
+    keyGenerator: (req) => req.headers['x-forwarded-for'] as string ?? req.ip,
+  });
+
+  // Correlation ID forwarded in every response
+  app.addHook('onSend', async (req, reply) => {
+    reply.header('x-request-id', req.id);
+  });
+
+  // Infrastructure plugins
+  await app.register(dbPlugin);
+  await app.register(redisPlugin);
+  await app.register(bullPlugin);
+
+  // Health check — verifies DB + Redis connectivity
+  app.get('/health', async (req, reply) => {
+    try {
+      await app.db.query('SELECT 1');
+      await app.redis.ping();
+      return reply.send({ status: 'ok', db: 'up', redis: 'up' });
+    } catch (err) {
+      req.log.error(err, 'Health check failed');
+      return reply.status(503).send({ status: 'error' });
+    }
+  });
+
+  // TODO: Register auth, user, challenge, reward, leaderboard routes
 
   return app;
-};
+}
 
-const start = async () => {
+async function start(): Promise<void> {
   const app = await buildApp();
+
+  const shutdown = async (signal: string) => {
+    app.log.info(`Received ${signal}, shutting down gracefully`);
+    await app.close();
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
-    app.log.info(`Server running on http://localhost:${config.port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
   }
-};
+}
 
 start();
-
-export { buildApp };
