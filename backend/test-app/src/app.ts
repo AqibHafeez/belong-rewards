@@ -15,6 +15,7 @@ import userRoutes from './routes/users';
 import challengeRoutes from './routes/challenges';
 import rewardRoutes from './routes/rewards';
 import leaderboardRoutes from './routes/leaderboard';
+import adminRoutes from './routes/admin';
 import { LeaderboardService } from './services/LeaderboardService';
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -92,6 +93,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(challengeRoutes, { prefix: '/api/challenges' });
   await app.register(rewardRoutes, { prefix: '/api/rewards' });
   await app.register(leaderboardRoutes, { prefix: '/api/leaderboard' });
+  await app.register(adminRoutes, { prefix: '/api/admin' });
 
   // Warm Redis leaderboard cache from DB on startup
   app.addHook('onReady', async () => {
