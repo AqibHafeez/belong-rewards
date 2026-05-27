@@ -24,7 +24,14 @@ export const config = {
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'change-me-access-secret',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'change-me-refresh-secret',
-    accessExpiresIn: '15m',
-    refreshExpiresIn: '7d',
+    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    refreshTtlMs: parseInt(process.env.JWT_REFRESH_TTL_MS || String(7 * 24 * 60 * 60 * 1000), 10),
+  },
+
+  auth: {
+    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+    maxFailedAttempts: parseInt(process.env.MAX_FAILED_ATTEMPTS || '5', 10),
+    lockDurationMs: parseInt(process.env.LOCK_DURATION_MS || String(15 * 60 * 1000), 10),
   },
 };

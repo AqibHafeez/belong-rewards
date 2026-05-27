@@ -7,6 +7,7 @@ import { config } from './config';
 import dbPlugin from './plugins/db';
 import redisPlugin from './plugins/redis';
 import bullPlugin from './plugins/bull';
+import { AppError } from './errors';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -52,6 +53,19 @@ export async function buildApp(): Promise<FastifyInstance> {
       req.log.error(err, 'Health check failed');
       return reply.status(503).send({ status: 'error' });
     }
+  });
+
+  // Centralised error handler
+  app.setErrorHandler((err, req, reply) => {
+    if (err instanceof AppError) {
+      return reply.status(err.statusCode).send({ error: err.message });
+    }
+    // Fastify validation errors (schema mismatch)
+    if (err.statusCode && err.statusCode < 500) {
+      return reply.status(err.statusCode).send({ error: err.message });
+    }
+    req.log.error({ err, requestId: req.id }, 'Unhandled error');
+    return reply.status(500).send({ error: 'Internal server error' });
   });
 
   // TODO: Register auth, user, challenge, reward, leaderboard routes
