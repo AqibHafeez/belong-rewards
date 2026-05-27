@@ -64,6 +64,12 @@ type UpdateRewardBodyT    = Static<typeof UpdateRewardBody>;
 export default async function adminRoutes(fastify: FastifyInstance) {
   const adminService = new AdminService(fastify.db);
 
+  fastify.addHook('onRoute', (route) => {
+    route.schema = route.schema ?? {};
+    route.schema.tags = ['admin'];
+    route.schema.security = [{ adminApiKey: [] }];
+  });
+
   fastify.addHook('preHandler', adminAuthenticate);
 
   // ── Challenges ──────────────────────────────────────────────────────────────

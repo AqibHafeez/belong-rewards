@@ -8,6 +8,7 @@ import dbPlugin from './plugins/db';
 import redisPlugin from './plugins/redis';
 import bullPlugin from './plugins/bull';
 import { AppError } from './errors';
+import swaggerPlugin from './plugins/swagger';
 import { HttpStatus } from './utils/HttpStatus';
 import { ResponseHelper } from './utils/ResponseHelper';
 import authRoutes from './routes/auth';
@@ -25,6 +26,9 @@ export async function buildApp(): Promise<FastifyInstance> {
     requestIdHeader: 'x-request-id',
     requestIdLogLabel: 'requestId',
   });
+
+  // Swagger — must be before routes
+  await app.register(swaggerPlugin);
 
   // Security headers
   await app.register(helmet, { contentSecurityPolicy: false });
@@ -53,7 +57,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(bullPlugin);
 
   // Health check — verifies DB + Redis connectivity
-  app.get('/health', async (req, reply) => {
+  app.get('/health', { schema: { tags: ['health'] } }, async (req, reply) => {
     try {
       await app.db.query('SELECT 1');
       await app.redis.ping();

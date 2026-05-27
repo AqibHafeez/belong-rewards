@@ -34,7 +34,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // POST /api/auth/register
   fastify.post<{ Body: RegisterBodyT }>(
     '/register',
-    { schema: { body: RegisterBody } },
+    { schema: { tags: ['auth'], body: RegisterBody } },
     async (request, reply) => {
       const { email, password, displayName } = request.body;
       const tokens = await authService.register(email, password, displayName);
@@ -47,7 +47,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // POST /api/auth/login
   fastify.post<{ Body: LoginBodyT }>(
     '/login',
-    { schema: { body: LoginBody } },
+    { schema: { tags: ['auth'], body: LoginBody } },
     async (request, reply) => {
       const { email, password } = request.body;
       const tokens = await authService.login(email, password);
@@ -60,7 +60,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // POST /api/auth/refresh  — refresh token is the credential, no Bearer needed
   fastify.post<{ Body: TokenBodyT }>(
     '/refresh',
-    { schema: { body: TokenBody } },
+    { schema: { tags: ['auth'], body: TokenBody } },
     async (request, reply) => {
       const { refreshToken } = request.body;
       const tokens = await authService.refresh(refreshToken);
@@ -73,7 +73,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // POST /api/auth/logout  — must be authenticated
   fastify.post<{ Body: TokenBodyT }>(
     '/logout',
-    { schema: { body: TokenBody }, preHandler: [authenticate] },
+    { schema: { tags: ['auth'], body: TokenBody, security: [{ bearerAuth: [] }] }, preHandler: [authenticate] },
     async (request, reply) => {
       const { refreshToken } = request.body;
       await authService.logout(refreshToken);

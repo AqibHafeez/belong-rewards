@@ -19,7 +19,12 @@ type PaginationQueryT = Static<typeof PaginationQuery>;
 export default async function rewardRoutes(fastify: FastifyInstance) {
   const rewardService = new RewardService(fastify.db, fastify.redis);
 
-  // All reward routes require authentication
+  fastify.addHook('onRoute', (route) => {
+    route.schema = route.schema ?? {};
+    route.schema.tags = ['rewards'];
+    route.schema.security = [{ bearerAuth: [] }];
+  });
+
   fastify.addHook('preHandler', authenticate);
 
   // GET /api/rewards?page=1&limit=20

@@ -25,7 +25,12 @@ type PaginationQueryT   = Static<typeof PaginationQuery>;
 export default async function userRoutes(fastify: FastifyInstance) {
   const userService = new UserService(fastify.db);
 
-  // All user routes require authentication
+  fastify.addHook('onRoute', (route) => {
+    route.schema = route.schema ?? {};
+    route.schema.tags = ['users'];
+    route.schema.security = [{ bearerAuth: [] }];
+  });
+
   fastify.addHook('preHandler', authenticate);
 
   // GET /api/users/me

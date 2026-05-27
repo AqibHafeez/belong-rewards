@@ -29,6 +29,11 @@ type CompleteBodyT = Static<typeof CompleteBody>;
 export default async function challengeRoutes(fastify: FastifyInstance) {
   const challengeService = new ChallengeService(fastify.db, fastify.redis);
 
+  fastify.addHook('onRoute', (route) => {
+    route.schema = route.schema ?? {};
+    route.schema.tags = ['challenges'];
+  });
+
   // Register Bull worker — runs off the HTTP thread
   fastify.challengeQueue.process(
     async (job) => challengeService.processCompletionJob(job),
@@ -76,7 +81,7 @@ export default async function challengeRoutes(fastify: FastifyInstance) {
   // POST /api/challenges/:id/complete  — requires auth, enqueues async job
   fastify.post<{ Params: { id: string }; Body: CompleteBodyT }>(
     '/:id/complete',
-    { schema: { body: CompleteBody }, preHandler: [authenticate] },
+    { schema: { body: CompleteBody, security: [{ bearerAuth: [] }] }, preHandler: [authenticate] },
     async (request, reply) => {
       const result = await challengeService.enqueueCompletion(
         request.user!.userId,

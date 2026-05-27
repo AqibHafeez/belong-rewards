@@ -19,7 +19,12 @@ type PaginationQueryT = Static<typeof PaginationQuery>;
 export default async function leaderboardRoutes(fastify: FastifyInstance) {
   const leaderboardService = new LeaderboardService(fastify.db, fastify.redis);
 
-  // All leaderboard routes require authentication
+  fastify.addHook('onRoute', (route) => {
+    route.schema = route.schema ?? {};
+    route.schema.tags = ['leaderboard'];
+    route.schema.security = [{ bearerAuth: [] }];
+  });
+
   fastify.addHook('preHandler', authenticate);
 
   // GET /api/leaderboard?page=1&limit=20
