@@ -13,6 +13,7 @@ import { ResponseHelper } from './utils/ResponseHelper';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import challengeRoutes from './routes/challenges';
+import rewardRoutes from './routes/rewards';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -87,7 +88,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(userRoutes, { prefix: '/api/users' });
   await app.register(challengeRoutes, { prefix: '/api/challenges' });
-  // TODO: Register reward, leaderboard routes
+  await app.register(rewardRoutes, { prefix: '/api/rewards' });
+  // TODO: Register leaderboard routes
 
   return app;
 }
