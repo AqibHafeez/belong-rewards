@@ -1,3 +1,12 @@
+# One-command demo:  docker compose up --build
+# API:      http://localhost:3000
+# Swagger:  http://localhost:3000/docs
+# Health:   http://localhost:3000/health
+#
+# Demo login (password: Test@1234):
+#   alice@belong.com | bob@belong.com | test@belong.com
+# Admin header: X-Admin-Key: demo-admin-key-change-in-production
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,6 +26,8 @@ services:
 
   postgres-test:
     image: postgres:16-alpine
+    profiles:
+      - test
     environment:
       POSTGRES_USER: belong
       POSTGRES_PASSWORD: belong_dev
@@ -44,10 +55,19 @@ services:
     ports:
       - '3000:3000'
     env_file:
-      - .env
+      - .env.example
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: belong
+      DB_PASSWORD: belong_dev
+      DB_DATABASE: fan_rewards
       REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: demo-access-secret-change-in-production
+      JWT_REFRESH_SECRET: demo-refresh-secret-change-in-production
+      ADMIN_API_KEY: demo-admin-key-change-in-production
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      LOG_LEVEL: info
     volumes:
       - .:/app
       - /app/node_modules
@@ -56,7 +76,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: npm run dev
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -e
+        echo "==> Running database migrations..."
+        npm run migration:run
+        echo "==> Seeding database (idempotent)..."
+        npm run seed
+        echo "==> Starting API..."
+        exec npm run dev
+    restart: unless-stopped
 
 volumes:
   pgdata:
