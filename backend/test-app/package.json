@@ -11,8 +11,10 @@
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/data-source.ts",
     "seed": "ts-node src/seed.ts",
-    "test": "jest --runInBand --passWithNoTests",
-    "test:coverage": "jest --runInBand --passWithNoTests --coverage"
+    "test": "jest --config jest.unit.config.ts --runInBand --passWithNoTests",
+    "test:unit": "jest --config jest.unit.config.ts --runInBand --passWithNoTests",
+    "test:integration": "jest --config jest.config.ts --runInBand --passWithNoTests",
+    "test:coverage": "jest --config jest.unit.config.ts --runInBand --passWithNoTests --coverage"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.0",
