@@ -35,6 +35,7 @@ export async function setupTestEnv(): Promise<TestEnv> {
 }
 
 export async function cleanupTestData(dataSource: DataSource, redis: Redis): Promise<void> {
+  await dataSource.query('DELETE FROM audit_logs');
   await dataSource.query('DELETE FROM reward_redemptions');
   await dataSource.query('DELETE FROM challenge_completions');
   await dataSource.query('DELETE FROM refresh_tokens');

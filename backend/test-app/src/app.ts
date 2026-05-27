@@ -9,6 +9,7 @@ import redisPlugin from './plugins/redis';
 import bullPlugin from './plugins/bull';
 import correlationIdPlugin from './plugins/correlationId';
 import challengeEventsPlugin from './plugins/challengeEvents';
+import auditLogPlugin from './plugins/auditLog';
 import { AppError } from './errors';
 import swaggerPlugin from './plugins/swagger';
 import { HttpStatus } from './utils/HttpStatus';
@@ -61,6 +62,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(dbPlugin);
+  await app.register(auditLogPlugin);
   await app.register(redisPlugin);
   await app.register(bullPlugin);
   await app.register(challengeEventsPlugin);

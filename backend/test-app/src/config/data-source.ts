@@ -7,6 +7,7 @@ import { ChallengeCompletion } from '../entities/ChallengeCompletion';
 import { Reward } from '../entities/Reward';
 import { RewardRedemption } from '../entities/RewardRedemption';
 import { RefreshToken } from '../entities/RefreshToken';
+import { AuditLog } from '../entities/AuditLog';
 
 // Single default export — TypeORM CLI requires exactly one DataSource export
 const AppDataSource = new DataSource({
@@ -16,7 +17,7 @@ const AppDataSource = new DataSource({
   username: config.db.username,
   password: config.db.password,
   database: config.db.database,
-  entities: [User, Challenge, ChallengeCompletion, Reward, RewardRedemption, RefreshToken],
+  entities: [User, Challenge, ChallengeCompletion, Reward, RewardRedemption, RefreshToken, AuditLog],
   migrations: [path.join(__dirname, '../migrations/*.{ts,js}')],
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',

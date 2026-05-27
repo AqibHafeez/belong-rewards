@@ -31,5 +31,6 @@ declare module 'fastify' {
     user?: {
       userId: string;
     };
+    auditStartTime?: number;
   }
 }
