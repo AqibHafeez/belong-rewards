@@ -14,6 +14,8 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import challengeRoutes from './routes/challenges';
 import rewardRoutes from './routes/rewards';
+import leaderboardRoutes from './routes/leaderboard';
+import { LeaderboardService } from './services/LeaderboardService';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -89,7 +91,14 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(userRoutes, { prefix: '/api/users' });
   await app.register(challengeRoutes, { prefix: '/api/challenges' });
   await app.register(rewardRoutes, { prefix: '/api/rewards' });
-  // TODO: Register leaderboard routes
+  await app.register(leaderboardRoutes, { prefix: '/api/leaderboard' });
+
+  // Warm Redis leaderboard cache from DB on startup
+  app.addHook('onReady', async () => {
+    const leaderboardService = new LeaderboardService(app.db, app.redis);
+    await leaderboardService.syncFromDB();
+    app.log.info('Leaderboard cache warmed from DB');
+  });
 
   return app;
 }
@@ -98,7 +107,7 @@ async function start(): Promise<void> {
   const app = await buildApp();
 
   const shutdown = async (signal: string) => {
-    app.log.info(`Received ${signal}, shutting down gracefully`);
+    app.log.info(`Received ${signal}, shutting down gracefully ZzZz...`);
     await app.close();
     process.exit(0);
   };
